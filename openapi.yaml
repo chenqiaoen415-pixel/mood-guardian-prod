@@ -1,0 +1,305 @@
+openapi: 3.0.3
+info:
+  title: Mood Guardian API
+  version: 0.1.0
+  description: Production API contract for Mood Guardian mobile app.
+servers:
+  - url: http://localhost:8787
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, displayName, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                displayName:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Tokens + user profile
+  /auth/login:
+    post:
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Tokens + user profile
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: New access token and rotated refresh token
+  /health:
+    get:
+      summary: Service health check
+      responses:
+        "200":
+          description: OK
+  /users/me:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get current user
+      responses:
+        "200":
+          description: User profile
+  /checkins:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create a daily check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, dateKey]
+              properties:
+                userId:
+                  type: integer
+                dateKey:
+                  type: string
+                  example: "2026-05-01"
+                moodScore:
+                  type: integer
+      responses:
+        "201":
+          description: Created
+  /checkins/{userId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: List user check-ins
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Check-in list
+  /community/posts:
+    get:
+      summary: List community posts
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Post list
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create community post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, type, topic, content]
+              properties:
+                userId:
+                  type: integer
+                type:
+                  type: string
+                  enum: [story, win, question, music, photo]
+                topic:
+                  type: string
+                content:
+                  type: string
+                mediaUrl:
+                  type: string
+                  format: uri
+      responses:
+        "201":
+          description: Created
+  /community/posts/{postId}/like:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Like a post
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Liked
+  /community/posts/{postId}/comments:
+    get:
+      summary: List comments for a post
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comment list
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create comment for a post
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, content]
+              properties:
+                userId:
+                  type: integer
+                content:
+                  type: string
+      responses:
+        "201":
+          description: Created
+  /chat/send:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Send a chat message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, message]
+              properties:
+                userId:
+                  type: integer
+                message:
+                  type: string
+      responses:
+        "200":
+          description: Assistant reply
+  /chat/history/{userId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Read chat history
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: History list
+  /reports:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Report a community post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [postId, reason]
+              properties:
+                postId:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        "201":
+          description: Report created
+  /reports/pending:
+    get:
+      summary: List pending reports (admin)
+      parameters:
+        - in: header
+          name: x-admin-secret
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pending report list
+  /reports/{id}/review:
+    post:
+      summary: Review report and hide/reject post (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: header
+          name: x-admin-secret
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, reviewerUserId]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, reject]
+                reviewerUserId:
+                  type: integer
+      responses:
+        "200":
+          description: Reviewed
