@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  api:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ../backend:/app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - PORT=8787
+      - DATABASE_URL=postgresql://mood_guardian:mood_guardian@postgres:5432/mood_guardian
+      - JWT_SECRET=replace-me
+    ports:
+      - "8787:8787"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=mood_guardian
+      - POSTGRES_USER=mood_guardian
+      - POSTGRES_PASSWORD=mood_guardian
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
